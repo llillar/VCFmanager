@@ -1,0 +1,2 @@
+# VCFmanager
+GWASなど下流の解析に向けたVCFのハンドリングツール
