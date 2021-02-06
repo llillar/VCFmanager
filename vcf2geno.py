@@ -19,15 +19,15 @@
   この場合ジェノタイプデータは下記のようにGT部分のみを残した形になります。
   1/1:0,25:25:75:1115,75,0 -> 1/1
 ・ジェノタイプを数値データに変換する際の規則を変更したい場合は -cr(--convert-rule)で指定して下さい。
-  例のようにコロンで区切り 野生型ホモ:ヘテロ:変異型ホモ の順番で指定して下さい。
-  例) -cr -1:NA:1
+  例のようにコロンで区切り [野生型ホモ:ヘテロ:変異型ホモ] の順番で指定して下さい。
+  例) -cr [-1:NA:1]
 ・マイナーアレル頻度によるフィルタリングを行いたい場合は -mM(--min-MAF)で指定して下さい。
   0 ~ 0.5の間で指定し、指定された頻度以下のアレルを持つSNP(行)は取り除かれます。
 ・欠損値の割合によるフィルタリングを行いたい場合は -mN(--max-NA)で指定して下さい。
   指定した割合以上の欠損値を含むSNP(行)は取り除かれます。
 ・入力VCF中で不要なフィールド(列)があれば -rf(--remove-fields)で指定して下さい。
   例のようにコロンで区切り指定して下さい。
-  例) -rf POS:ID:FILTER
+  例) -rf [POS:ID:FILTER]
 
 入出力ファイルは.vcf(.vcf.gz)もしくは.txtをサポートしています。
 入出力に圧縮形式を利用する場合は、処理時間が大幅に伸びる可能性があります。ディスクに余裕がある場合は、非圧縮形式を推奨します。
@@ -39,29 +39,12 @@ import argparse
 from collections import Counter
 import datetime
 import gzip
-from logging import basicConfig, getLogger, StreamHandler, FileHandler, info, INFO, Formatter
+#from logging import basicConfig, getLogger, StreamHandler, FileHandler, info, INFO, Formatter
 import os
 import re
 import sys
 import time
 from typing import Counter, IO, List, Pattern, Union
-
-
-################ Setting of logger ################
-logger = getLogger(__name__)
-logger.setLevel(INFO)
-
-sh = StreamHandler()
-sh.setLevel(INFO)
-sh.setFormatter(Formatter("%(asctime)s %(levelname)8s %(message)s"))
-
-fh = FileHandler(filename=__file__ + datetime.datetime.now().isoformat() +".log")
-fh.setLevel(INFO)
-fh.setFormatter(Formatter("%(asctime)s %(levelname)8s %(message)s"))
-
-logger.addHandler(sh)
-logger.addHandler(fh)
-################ End of setting of logger ################
 
 
 ################ Defining functions ################
@@ -82,6 +65,20 @@ def runtime_counter(start: float, end: float) -> str:
     """
     runtime: str = str(round((end - start), 2))
     return runtime
+
+
+def LOG(logfile: IO, text: str):
+    """
+    Arguments:
+    ===
+        logfile: IO
+            Opened log file.
+        text: str
+            Text message, to be logged.
+    """
+    message = datetime.datetime.now().isoformat() + "\t" + text
+    print(message)
+    logfile.write(message + "\n")
 
 
 def open_file(file_path: str, mode: str) -> Union[IO, bool]:
@@ -245,6 +242,9 @@ def change_Chrom(Chrom: str) -> str:
 
 
 def main():
+    log_file_name: str = __file__ + datetime.datetime.now().isoformat() +".log"
+    logfile: IO = open(log_file_name, "w")
+
     ################ Setting command line arguments ################
     parser=argparse.ArgumentParser(description=__doc__,
         formatter_class=argparse.RawDescriptionHelpFormatter)
@@ -270,10 +270,10 @@ def main():
     
     ##各ジェノタイプの変換ルール 野生型ホモ:ヘテロ:変異型ホモ(keep_GTがTrueのときは使用されない)
     parser.add_argument("-cr", "--convert-rule", type=str, action="store", 
-        dest="convert_rule", default="1:0:-1",
+        dest="convert_rule", default="[1:0:-1]",
         help="Conversion rule for converting genotype to numeric data.\
         Specify in the following order. \
-        REF:HETERO:ALT (default=1:0:-1)")
+        REF:HETERO:ALT (default=[1:0:-1])")
     
     ##マイナーアレル頻度によるフィルタリング(デフォルトはNA、フィルタリングしない)
     parser.add_argument("-mM", "--min-MAF", action="store",
@@ -298,19 +298,19 @@ def main():
     output_file_path: str = args.outputFilePath
     keep_header: bool = args.keep_header
     keep_GT: bool = args.keep_GT
-    convert_rule: List[str] = list(args.convert_rule.split(":")) ##リストに変換する
+    convert_rule: List[str] = list(args.convert_rule[1:-1].split(":")) ##[]を取り除いてリストに変換する
     min_MAF: Union[float, bool] = args.min_MAF
     max_NA: Union[float, bool] = args.max_NA
     if min_MAF != "NA" and (min_MAF < 0.0 or min_MAF > 0.5):
-        logger.info("min_MAF must be 0 ~ 1")
+        LOG(logfile, "min_MAF must be 0 ~ 1")
         sys.exit()
     if max_NA != "NA" and (max_NA < 0.0 or max_NA > 1.0):
-        logger.info("max_NA must be 0 ~ 1")
+        LOG(logfile, "max_NA must be 0 ~ 1")
         sys.exit()
     
-    ##リストに変換する、何も指定されていない場合空のリストを作る。
+    ##[]を取り除いてリストに変換する、何も指定されていない場合空のリストを作る。
     remove_fields: List[str] = \
-        args.remove_fields.split(":") if args.remove_fields else []
+        args.remove_fields[1:-1].split(":") if args.remove_fields else []
     
     ##指定したfieldsのインデックスを取り出す。
     All_fields = {"CHROM":0, "POS":1, "ID":2, "REF":3, "ALT":4, \
@@ -320,7 +320,7 @@ def main():
         try:
             remove_fields_index.append(All_fields[field])
         except KeyError:
-            logger.info(f"{field}は入力ファイルに含まれていません。")
+            LOG(logfile, f"{field}は入力ファイルに含まれていません。")
             sys.exit()
     
     ################ End of setting command line arguments ################
@@ -328,15 +328,15 @@ def main():
 
     ################ File Open ################
     if not open_file(input_file_path, "r"):
-        logger.info("Invalid format!")
-        logger.info("Only VCF format (.vcf, .vcf.gz, .txt) is supported for input files.")
+        LOG(logfile, "Invalid format!")
+        LOG(logfile, "Only VCF format (.vcf, .vcf.gz, .txt) is supported for input files.")
         sys.exit()
     else:
         input_file: IO = open_file(input_file_path, "r")
 
     if not open_file(output_file_path, "w"):
-        logger.info("Invalid format!")
-        logger.info("Only VCF format (.vcf, .vcf.gz, .txt) is supported for output files.")
+        LOG(logfile, "Invalid format!")
+        LOG(logfile, "Only VCF format (.vcf, .vcf.gz, .txt) is supported for output files.")
         sys.exit()
     else:
         output_file: IO = open_file(output_file_path, "w")
@@ -345,8 +345,8 @@ def main():
 
     ################ Main ################
     start: float = time.time()
-
-    logger.info(__file__ + f"\n\
+    
+    arg_text: str = __file__ + f"\n\
         \t\t\t\t--input_file_path {input_file_path}\n\
         \t\t\t\t--output_file_path {output_file_path}\n\
         \t\t\t\t--keep-header {keep_header}\n\
@@ -354,11 +354,11 @@ def main():
         \t\t\t\t--convert-rule {convert_rule}\n\
         \t\t\t\t--min-MAF {min_MAF}\n\
         \t\t\t\t--max-NA {max_NA}\n\
-        \t\t\t\t--remove-fields {remove_fields}")
+        \t\t\t\t--remove-fields {remove_fields}"
+    LOG(logfile, arg_text)
 
-
-    logger.info("=======================================================")
-    logger.info("Start program...")
+    LOG(logfile, "=======================================================")
+    LOG(logfile, "Start program...")
 
 
     
@@ -381,7 +381,7 @@ def main():
         ##headerのうち#CHROMから始まるもの
         elif line[0:6] == "#CHROM":
             line: List[str] = line.split()
-            line[0] == "CHROM"
+            line[0] = "CHROM"
             ##指定されたremove_fieldsを削除
             line = multi_pop(line, remove_fields_index)
             new_line: str = "\t".join(line)
@@ -416,17 +416,20 @@ def main():
     input_file.close()
     output_file.close()
     end: float = time.time()
-    logger.info("Success processing!")
-    logger.info(f"Run Time = {runtime_counter(start, end)} seconds")
-    logger.info(f"{count_SNPs} SNPs were written in your {output_file_path} .")
+    LOG(logfile, "Success processing!")
+    LOG(logfile, f"Run Time = {runtime_counter(start, end)} seconds")
+    LOG(logfile, f"{count_SNPs} SNPs were written in your {output_file_path} .")
     if multi_alt_site:
-        logger.info(f"{multi_alt_site} SNPs were multi allelic site, and they were removed.")
+        LOG(logfile, f"{multi_alt_site} SNPs were multi allelic site, and they were removed.")
     if under_MAF_site:
-        logger.info(f"{under_MAF_site} SNPs were under MAF, and they were removed.")
+        LOG(logfile, f"{under_MAF_site} SNPs were under MAF, and they were removed.")
     if above_NA_site:
-        logger.info(f"{above_NA_site} SNPs have more NA than you specified, and they were removed.")
+        LOG(logfile, f"{above_NA_site} SNPs have more NA than you specified, and they were removed.")
+    if remove_fields:
+        LOG(logfile, f"Field: {remove_fields} were removed.")
 
-    logger.info("=======================================================")
+    LOG(logfile, "=======================================================")
+    logfile.close()
     ################ End of main ################
 
 
