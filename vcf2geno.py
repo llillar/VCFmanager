@@ -391,7 +391,7 @@ def main():
                 pass
 
         ##headerのうち#CHROMから始まるもの
-        elif line("#CHROM"):
+        elif line.startswith("#CHROM"):
             line: List[str] = line.split()
             line[0] = "CHROM"
             ##指定されたremove_fieldsを削除
