@@ -298,7 +298,14 @@ def main():
     output_file_path: str = args.outputFilePath
     keep_header: bool = args.keep_header
     keep_GT: bool = args.keep_GT
-    convert_rule: List[str] = list(args.convert_rule[1:-1].split(":")) ##[]を取り除いてリストに変換する
+
+    ##[]つきで受け取る
+    ##-1などが先頭に来ると他の引数と認識されるため
+    if not args.convert_rule.startswith("[") or not args.convert_rule.endswith("]"):
+        LOG(logfile, f"Argument --convert-rule must be enclosed in []")
+        sys.exit()
+    ##[]を取り除いてリストに変換する
+    convert_rule: List[str] = list(args.convert_rule[1:-1].split(":"))
     min_MAF: Union[float, bool] = args.min_MAF
     max_NA: Union[float, bool] = args.max_NA
     if min_MAF != "NA" and (min_MAF < 0.0 or min_MAF > 0.5):
@@ -308,6 +315,11 @@ def main():
         LOG(logfile, "max_NA must be 0 ~ 1")
         sys.exit()
     
+    ##[]つきで受け取る
+    if args.remove_fields:
+        if not args.remove_fields.startswith("[") or not args.remove_fields.endswith("]"):
+            LOG(logfile, "Argument --remove-fields must be enclosed in []")
+            sys.exit()
     ##[]を取り除いてリストに変換する、何も指定されていない場合空のリストを作る。
     remove_fields: List[str] = \
         args.remove_fields[1:-1].split(":") if args.remove_fields else []
@@ -372,14 +384,14 @@ def main():
         line: str = line.rstrip("\n|\r|\r\n")
 
         ##header
-        if line[0:2] == "##":
+        if line.startswith("##"):
             if keep_header:
                 output_file.write(line + "\n")
             else:
                 pass
 
         ##headerのうち#CHROMから始まるもの
-        elif line[0:6] == "#CHROM":
+        elif line("#CHROM"):
             line: List[str] = line.split()
             line[0] = "CHROM"
             ##指定されたremove_fieldsを削除
