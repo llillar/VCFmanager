@@ -66,7 +66,7 @@ def Multi_pop(target_list: List[Any], index_list: List[int]) -> list:
     
     Returns:
     ----------
-    return1: list
+    return: list
         List with some element(s) removed.
     """
     index_list.sort(reverse=True)
@@ -76,8 +76,7 @@ def Multi_pop(target_list: List[Any], index_list: List[int]) -> list:
     # target_listから除く
     for i in index_list:
         target_list.pop(i)
-    removed_list: list = target_list
-    return removed_list
+    return target_list
 
 
 if __name__=="__main__":
