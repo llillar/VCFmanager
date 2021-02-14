@@ -5,7 +5,8 @@
 '''
 
 from collections import Counter
-from typing import Counter, List
+from typing import Counter, List, Pattern
+import re
 
 def Check_alt(alt: str) -> bool:
     """
@@ -15,7 +16,7 @@ def Check_alt(alt: str) -> bool:
     Arguments:
     ----------
     alt: str
-        ALT field of input VCF.
+        ALT field of each Data line on input VCF.
     
     Returns:
     ----------
@@ -23,8 +24,8 @@ def Check_alt(alt: str) -> bool:
         If ALT has more than two alleles, return True.
         If not, return False.
     """
-    #alt: str = line.split("\t")[4]
-    #各Data lineの5列目
+    # alt: str = line.split("\t")[4]
+    # 各Data lineの5列目
     if alt.count(","):
         return True
     else:
@@ -45,15 +46,15 @@ def Remain_only_GT(geno: str) -> str:
     GT: str
         GT(genotype) from Genotype field.
     """
-    expected_GT: List[str] = ["0/0", "0/1", "1/0", "1/1", "./."]
+    expected_GT: Pattern = re.compile("(\d/\d)|(\./\.)")
 
-    #geno_list: List[str] = line.split("\t")[9:]
-    #各Data lineの9列目以降、各列がgenotype fieldに相当
+    # geno_list: List[str] = line.split("\t")[9:]
+    # 各Data lineの9列目以降、各列がgenotype fieldに相当
     GT: str = geno.split(":")[0].replace("|", "/")
 
     #GATKを使った際にフォーマットに則らないジェノタイプが出てきたことがある。(仕様？)
     #そうしたジェノタイプは欠損値に変換する。
-    if GT not in expected_GT:
+    if not re.match(expected_GT, GT):
         GT = "./."
     return GT
 
@@ -110,7 +111,7 @@ def calc_MAF(GT_list: List[str]) -> float:
 
 def calc_NA_rate(GT_list: List[str]) -> float:
     """
-    Description of this function.
+    Calculate percentage of NA.
     
     Arguments:
     ----------
@@ -127,6 +128,26 @@ def calc_NA_rate(GT_list: List[str]) -> float:
     NA_Num: int = sum(Count_Summary["./."])
     NA_rate: float = NA_Num / Num
     return NA_rate
+
+
+def Change_chrom(chrom: str) -> str:
+    """
+    Remain only numeric of #CHROM field in Data line.
+    
+    Arguments:
+    ----------
+    chrom: str
+        #CHROM field of each Data line on input VCF.
+    
+    Returns:
+    ----------
+    num: str
+        Number of chromosome.
+    """
+    # 染色体の数字だけ抜き出す。
+    # XやYのような文字には非対応。
+    regix = re.compile(r"[1-9]\d*")
+    return re.findall(regix, Chrom)[-1]
 
 
 if __name__=="__main__":
