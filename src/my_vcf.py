@@ -81,13 +81,13 @@ def GT2numeric(GT_list: List[str], convert_rule: List[str]) -> List[str]:
     """
     REF, HETERO, ALT = convert_rule
     # 一度文字列にして置換するのが一番速い??
-    tmp = "\t"/join(GT)
-    tmp.replace("0/0", REF).replace("0/1", HETERO).replace("1/0", HETERO).replace("1/1", ALT).replace("./.", "NA")
+    tmp: str = "\t".join(GT_list)
+    tmp: str = tmp.replace("0/0", REF).replace("0/1", HETERO).replace("1/0", HETERO).replace("1/1", ALT).replace("./.", "NA")
     num_list: List[str] = tmp.split("\t")
     return num_list
 
 
-def calc_MAF(GT_list: List[str]) -> float:
+def Calc_MAF(GT_list: List[str]) -> float:
     """
     Calculate Minor Allele Frequency.
     
@@ -102,14 +102,14 @@ def calc_MAF(GT_list: List[str]) -> float:
         Minor Allele Frequency.
     """
     Count_Summary: Counter = Counter(GT_list)
-    Genotyped: int = (len(GT_list) - Count_Summary("./.")) * 2
-    ALT_num: int = Count_Summary("0/1") + Count_Summary("1/0") + Count_Summary("1/1") * 2
+    Genotyped: int = (len(GT_list) - Count_Summary["./."]) * 2
+    ALT_num: int = Count_Summary["0/1"] + Count_Summary["1/0"] + Count_Summary["1/1"] * 2
     AAF: float = ALT_num / Genotyped
     MAF: float = min(AAF, 1 - AAF)
     return MAF
 
 
-def calc_NA_rate(GT_list: List[str]) -> float:
+def Calc_NA_rate(GT_list: List[str]) -> float:
     """
     Calculate percentage of NA.
     
@@ -125,7 +125,7 @@ def calc_NA_rate(GT_list: List[str]) -> float:
     """
     Count_Summary: Counter = Counter(GT_list)
     Num: int = len(GT_list)
-    NA_Num: int = sum(Count_Summary["./."])
+    NA_Num: int = Count_Summary["./."]
     NA_rate: float = NA_Num / Num
     return NA_rate
 
@@ -147,7 +147,7 @@ def Change_chrom(chrom: str) -> str:
     # 染色体の数字だけ抜き出す。
     # XやYのような文字には非対応。
     regix = re.compile(r"[1-9]\d*")
-    return re.findall(regix, Chrom)[-1]
+    return re.findall(regix, chrom)[-1]
 
 
 if __name__=="__main__":
