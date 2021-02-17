@@ -1,7 +1,7 @@
 #! /usr/bin/python3
 #! coding: utf-8
 '''
-Python >= 3.6
+Python >= 3.7
 VCF version4.2
 (https://samtools.github.io/hts-specs/VCFv4.2.pdf)
 
@@ -10,6 +10,7 @@ VCF version4.2
     -o (--output-file-path)
     -cr (--convert-rule)
     -mM (--min-MAF)
+    -mN (--max-NA)
     -rf (--remove-fields)
 
 BeagleによるImputationを行った後、RやPythonで解析を進めるための前処理用スクリプト。
@@ -26,7 +27,7 @@ import time
 from typing import Counter, List, Pattern
 
 from src.my_utils import Runtime_counter, Multi_pop
-from src.my_vcf import Check_alt, GT2numeric, Remain_only_GT, Calc_MAF, Change_chrom
+from src.my_vcf import Check_alt, GT2numeric, Remain_only_GT, Calc_MAF, Calc_NA_rate, Change_chrom
 
 
 def main():
@@ -53,7 +54,14 @@ def main():
     # マイナーアレル頻度によるフィルタリング
     # (デフォルトはNA、フィルタリングしない)
     parser.add_argument("-mM", "--min-MAF", action="store",dest="min_MAF", \
-        default="NA",help="SNP below min-MAF will be removed.0 ~ 0.5 \
+        default="NA", help="SNP below min-MAF will be removed.0 ~ 0.5 \
+            (default=\"NA\", nothing will be removed)\
+            ")
+    
+    # 欠損値の割合によるフィルタリング
+    # (デフォルトはNA、フィルタリングしない)
+    parser.add_argument("-mN", "--max-NA", action="store", dest="max_NA", \
+        default="NA", help="SNP above max-NA will be removed. 0 ~ 1 \
             (default=\"NA\", nothing will be removed)\
             ")
 
@@ -78,11 +86,18 @@ def main():
     # []を取り除いてリストに変換する
     convert_rule: List[str] = list(args.convert_rule[1:-1].split(":"))
 
-    min_MAF: Union[str, bool] = args.min_MAF
+    min_MAF: Union[str, NA] = args.min_MAF
     if min_MAF != "NA":
         min_MAF = float(min_MAF)
         if min_MAF < 0.0 or min_MAF > 0.5:
-            print("min_MAF must be 0 ~ 1")
+            print("min_MAF must be 0 ~ 0.5")
+            sys.exit()
+    
+    max_NA: Union[str, NA] = args.max_NA
+    if max_NA != "NA":
+        max_NA = float(max_NA)
+        if max_NA < 0.0 or max_NA > 1.0:
+            print("max_NA must be 0 ~ 1")
             sys.exit()
 
     # []つきで受け取る
@@ -129,6 +144,7 @@ def main():
         \t\t\t\t--output_file_path {output_file_path}\n\
         \t\t\t\t--convert-rule {convert_rule}\n\
         \t\t\t\t--min-MAF {min_MAF}\n\
+        \t\t\t\t--max-NA {max_NA}\n\
         \t\t\t\t--remove-fields {remove_fields}\n")
     logger.info("=======================================================")
     logger.info("Start program...")
@@ -137,6 +153,7 @@ def main():
     count_SNPs: int = 0
     multi_alt_site: int = 0
     under_MAF_site: int = 0
+    above_NA_site: int = 0
     try:
         with open(input_file_path, "r") as input_file, \
             open(output_file_path, "w") as output_file:
@@ -156,12 +173,16 @@ def main():
                     splited_line: List[str] = line.split("\t")
 
                     # 縦棒が残っているとMAFの計算に影響が出るので変換する
-                    splited_line[9:] = list(map(lambda x: x.replace("|", "/"), \
-                        splited_line[9:]))
+                    # Remain_only_GTを使うのは、
+                    # 生のVCFから直接このスクリプトを動かす時に必要なため
+                    splited_line[9:] = \
+                        list(map(Remain_only_GT, splited_line[9:]))
                     if Check_alt(splited_line[4]):
                         multi_alt_site += 1 # multi allelic siteの場合は書き出さない
                     elif min_MAF != "NA" and Calc_MAF(splited_line[9:]) <= min_MAF:
-                        under_MAF_site += 1 #min_MAF以下のSNPは書き出さない
+                        under_MAF_site += 1 # min_MAF以下のSNPは書き出さない
+                    elif max_NA != "NA" and Calc_NA_rate(splited_line[9:]) >= max_NA:
+                        above_NA_site += 1 # max_NA以上のNAの割合のSNPは書き出さない
                     else:
                         # #CHROM fieldを染色体番号だけに変える。
                         splited_line[0] = Change_chrom(splited_line[0])
@@ -205,8 +226,9 @@ def main():
         logger.info(f"{multi_alt_site} SNPs were multi allelic site, \
             and they were removed.")
     if under_MAF_site:
-        logger.info(f"{under_MAF_site} SNPs were under MAF, \
-            and they were removed.")
+        logger.info(f"{under_MAF_site} SNPs were under {min_MAF}, and they were removed.")
+    if above_NA_site:
+        logger.info(f"{above_NA_site} SNPs were above {max_NA}, and they were removed.")
     if remove_fields:
         logger.info(f"Field: {remove_fields} were removed.")
     logger.info("=======================================================")

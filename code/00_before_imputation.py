@@ -1,7 +1,7 @@
 #! /usr/bin/python3
 #! coding: utf-8
 '''
-Python >= 3.6
+Python >= 3.7
 VCF version4.2
 (https://samtools.github.io/hts-specs/VCFv4.2.pdf)
 
