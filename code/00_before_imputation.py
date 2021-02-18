@@ -19,26 +19,30 @@ GTAKで2倍体にも関わらず半数体のジェノタイプが出たことが
 import argparse
 import datetime
 from logging import getLogger, StreamHandler, FileHandler, INFO, Formatter
+import os
 import sys
 import time
 from typing import List
 
-sys.path.append("./src")
+sys.path.append(os.path.dirname(os.path.abspath(__file__)) + "/src")
 from my_utils import Runtime_counter
 from my_vcf import Remain_only_GT
 
 
 def main():
     ################ Setting command line arguments ################
-    parser=argparse.ArgumentParser(description=__doc__,
+    parser=argparse.ArgumentParser(
+        description=__doc__,
         formatter_class=argparse.RawDescriptionHelpFormatter)
 
     # 入力ファイルのパス(必須)
-    parser.add_argument("-i", "--input-file-path", type=str, action="store",
+    parser.add_argument(
+        "-i", "--input-file-path", type=str, action="store",
         dest="inputFilePath", required=True, help="Path to input file.")
     
     # 出力ファイルのパス(必須)
-    parser.add_argument("-o", "--output-file-path", type=str, action="store",
+    parser.add_argument(
+        "-o", "--output-file-path", type=str, action="store",
         dest="outputFilePath", required=True, help="Path to output file.")
     
     args = parser.parse_args()
@@ -53,7 +57,8 @@ def main():
     sh = StreamHandler()
     sh.setLevel(INFO)
     sh.setFormatter(Formatter("%(asctime)s %(message)s"))
-    fh = FileHandler(filename=__file__ + datetime.datetime.now().isoformat() +".log")
+    fh = FileHandler(
+        filename=__file__ + datetime.datetime.now().isoformat() +".log")
     fh.setLevel(INFO)
     fh.setFormatter(Formatter("%(asctime)s %(message)s"))
     logger.addHandler(sh)
