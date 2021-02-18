@@ -1,4 +1,4 @@
-#! /usr/bin/python3
+#! /usr/local/bin/python3
 #! coding: utf-8
 '''
 Python >= 3.7
@@ -18,14 +18,14 @@ GTAKで2倍体にも関わらず半数体のジェノタイプが出たことが
 
 import argparse
 import datetime
-from logging import basicConfig, getLogger, StreamHandler, FileHandler, info, INFO, Formatter
-import re
+from logging import getLogger, StreamHandler, FileHandler, INFO, Formatter
 import sys
 import time
-from typing import List, Pattern
+from typing import List
 
-from src.my_utils import Runtime_counter
-from src.my_vcf import Remain_only_GT
+sys.path.append("./src")
+from my_utils import Runtime_counter
+from my_vcf import Remain_only_GT
 
 
 def main():

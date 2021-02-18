@@ -1,4 +1,4 @@
-#! /usr/bin/python3
+#! /usr/local/bin/python3
 #! coding: utf-8
 '''
 Python >= 3.7
@@ -18,16 +18,15 @@ BeagleによるImputationを行った後、RやPythonで解析を進めるため
 '''
 
 import argparse
-from collections import Counter
 import datetime
-from logging import basicConfig, getLogger, StreamHandler, FileHandler, info, INFO, Formatter
-import re
+from logging import getLogger, StreamHandler, FileHandler, INFO, Formatter
 import sys
 import time
-from typing import Counter, List, Pattern
+from typing import List
 
-from src.my_utils import Runtime_counter, Multi_pop
-from src.my_vcf import Check_alt, GT2numeric, Remain_only_GT, Calc_MAF, Calc_NA_rate, Change_chrom
+sys.path.append("./src")
+from my_utils import Runtime_counter, Multi_pop
+from my_vcf import Check_alt, GT2numeric, Remain_only_GT, Calc_MAF, Calc_NA_rate, Change_chrom
 
 
 def main():
@@ -86,14 +85,14 @@ def main():
     # []を取り除いてリストに変換する
     convert_rule: List[str] = list(args.convert_rule[1:-1].split(":"))
 
-    min_MAF: Union[str, NA] = args.min_MAF
+    min_MAF: str = args.min_MAF
     if min_MAF != "NA":
         min_MAF = float(min_MAF)
         if min_MAF < 0.0 or min_MAF > 0.5:
             print("min_MAF must be 0 ~ 0.5")
             sys.exit()
     
-    max_NA: Union[str, NA] = args.max_NA
+    max_NA: str = args.max_NA
     if max_NA != "NA":
         max_NA = float(max_NA)
         if max_NA < 0.0 or max_NA > 1.0:
