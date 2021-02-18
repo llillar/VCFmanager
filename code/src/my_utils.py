@@ -1,10 +1,10 @@
-#! /usr/bin/python3
+#! /usr/local/bin/python3
 #! coding: utf-8
 '''
 このモジュールはよく使う汎用的な??関数をまとめたものです。
 '''
 
-from typing import Any, Counter, IO, List, Pattern, Union
+from typing import Any, List, Tuple
 
 def Runtime_counter(start: float, end: float) -> str: 
     """
@@ -27,7 +27,7 @@ def Runtime_counter(start: float, end: float) -> str:
     return runtime
 
 
-def Get_index(target_list: List[Any], element: Any) -> (int, None):
+def Get_index(target_list: List[Any], element: Any) -> Tuple[int, None]:
     """
     Get index of element from target_list
     
@@ -43,7 +43,7 @@ def Get_index(target_list: List[Any], element: Any) -> (int, None):
         description
     """
     try:
-        index: int = target.index(element)
+        index: int = target_list.index(element)
         return index
     except ValueError:
         # リストに無いelementが指定された時。
@@ -78,6 +78,8 @@ def Multi_pop(target_list: List[Any], index_list: List[int]) -> list:
         target_list.pop(i)
     return target_list
 
+def main():
+    print("Hello, this is my_utils.py")
 
 if __name__=="__main__":
     main()

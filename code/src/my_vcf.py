@@ -1,4 +1,4 @@
-#! /usr/bin/python3
+#! /usr/local/bin/python3
 #! coding: utf-8
 '''
 このモジュールはVCFハンドリング関連の関数をまとめたものです。
@@ -146,9 +146,12 @@ def Change_chrom(chrom: str) -> str:
     """
     # 染色体の数字だけ抜き出す。
     # XやYのような文字には非対応。
-    regix = re.compile(r"[1-9]\d*")
+    regix: Pattern = re.compile(r"[1-9]\d*")
     return re.findall(regix, chrom)[-1]
 
+
+def main():
+    print("Hello, this is my_vcf.py")
 
 if __name__=="__main__":
     main()
