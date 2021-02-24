@@ -103,7 +103,9 @@ def Calc_MAF(GT_list: List[str]) -> float:
     """
     Count_Summary: Counter = Counter(GT_list)
     Genotyped: int = (len(GT_list) - Count_Summary["./."]) * 2
-    ALT_num: int = Count_Summary["0/1"] + Count_Summary["1/0"] + Count_Summary["1/1"] * 2
+    ALT_num: int = Count_Summary["0/1"] \
+                 + Count_Summary["1/0"] \
+                 + Count_Summary["1/1"] * 2
     AAF: float = ALT_num / Genotyped
     MAF: float = min(AAF, 1 - AAF)
     return MAF

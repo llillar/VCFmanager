@@ -20,58 +20,62 @@ BeagleによるImputationを行った後、RやPythonで解析を進めるため
 import argparse
 import datetime
 from logging import getLogger, StreamHandler, FileHandler, INFO, Formatter
+import os
 import sys
 import time
 from typing import List
 
-sys.path.append("./src")
+sys.path.append(os.path.dirname(os.path.abspath(__file__)) + "/src")
 from my_utils import Runtime_counter, Multi_pop
 from my_vcf import Check_alt, GT2numeric, Remain_only_GT, Calc_MAF, Calc_NA_rate, Change_chrom
 
 
 def main():
     ################ Setting command line arguments ################
-    parser=argparse.ArgumentParser(description=__doc__,
+    parser=argparse.ArgumentParser(
+        description=__doc__,
         formatter_class=argparse.RawDescriptionHelpFormatter)
     
     # 入力ファイルのパス(必須)
-    parser.add_argument("-i", "--input-file-path", type=str, action="store",
+    parser.add_argument(
+        "-i", "--input-file-path", type=str, action="store",
         dest="inputFilePath", required=True, help="Path to input file.")
     
     # 出力ファイルのパス(必須)
-    parser.add_argument("-o", "--output-file-path", type=str, action="store",
+    parser.add_argument(
+        "-o", "--output-file-path", type=str, action="store",
         dest="outputFilePath", required=True, help="Path to output file.")
     
     # 各ジェノタイプの変換ルール
     # [野生型ホモ:ヘテロ:変異型ホモ]
-    parser.add_argument("-cr", "--convert-rule", type=str, action="store", 
+    parser.add_argument(
+        "-cr", "--convert-rule", type=str, action="store", 
         dest="convert_rule", default="[1:0:-1]",
         help="Conversion rule for converting genotype to numeric data.\
-        Specify in the following order. \
-        REF:HETERO:ALT (default=[1:0:-1])")
+        Specify in the following order. REF:HETERO:ALT default=[1:0:-1]")
     
     # マイナーアレル頻度によるフィルタリング
     # (デフォルトはNA、フィルタリングしない)
-    parser.add_argument("-mM", "--min-MAF", action="store",dest="min_MAF", \
-        default="NA", help="SNP below min-MAF will be removed.0 ~ 0.5 \
-            (default=\"NA\", nothing will be removed)\
-            ")
+    parser.add_argument(
+        "-mM", "--min-MAF", action="store",dest="min_MAF", default="NA", 
+        help="SNP below min-MAF will be removed.\
+        0 ~ 0.5 default=\"NA\", nothing will be removed.")
     
     # 欠損値の割合によるフィルタリング
     # (デフォルトはNA、フィルタリングしない)
-    parser.add_argument("-mN", "--max-NA", action="store", dest="max_NA", \
-        default="NA", help="SNP above max-NA will be removed. 0 ~ 1 \
-            (default=\"NA\", nothing will be removed)\
-            ")
+    parser.add_argument(
+        "-mN", "--max-NA", action="store", dest="max_NA", default="NA", 
+        help="SNP above max-NA will be removed. \
+        0 ~ 1 default=\"NA\", nothing will be removed.")
 
     
     # VCFの不要なフィールドを指定
     # (デフォルトは何も指定していない、False)
-    parser.add_argument("-rf", "--remove-fields", action="store",
-        dest="remove_fields", default=False,
-        help="Fileds of VCF to remove. Specify any or all of, \
-            CHROM, POS, ID, REF, ALT, QUAL, FILTER, INFO, FORMAT \
-            separated by colons(:) (default=False)")
+    parser.add_argument(
+        "-rf", "--remove-fields", action="store", dest="remove_fields", 
+        default=False, help="Fileds of VCF to remove. Specify any or all of, \
+        CHROM, POS, ID, REF, ALT, QUAL, FILTER, INFO, FORMAT \
+        separated by colons(:) default=False")
     
     args = parser.parse_args()
     input_file_path: str = args.inputFilePath
@@ -193,7 +197,8 @@ def main():
                                 splited_line[0] + "-" +splited_line[1]
                         
                         # GTを数値データに変換する
-                        splited_line[9:] = GT2numeric(splited_line[9:], convert_rule)
+                        splited_line[9:] = \
+                            GT2numeric(splited_line[9:], convert_rule)
 
                         # 不要な列を除く
                         splited_line = \
