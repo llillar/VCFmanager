@@ -92,56 +92,66 @@ def main():
     logger.info("=======================================================")
     logger.info("Start program...")
 
-    # Reading data as pandas dataframe
     try:
-        logger.info("Reading data...")
-        df: pd.DataFrame = pd.read_table(input_file_path, index_col=0)
-    except FileNotFoundError as fene:
+        # Reading data as pandas dataframe
+        try:
+            logger.info("Reading data...")
+            df: pd.DataFrame = pd.read_table(input_file_path, index_col=0)
+        except FileNotFoundError as fene:
+            logger.info("Error!")
+            logger.info(f"File: {fene.filename} does not exisit.")
+            logger.info("Suspend the process.")
+            logger.info("=======================================================")
+            sys.exit()
+
+        # Standardizing by each line(SNP).
+        logger.info("Standardizing data...")
+        df = df.apply(lambda x: (x-x.mean())/x.std(ddof=True), axis=1)
+        df = df.T
+
+        # Performing PCA
+        logger.info("Performing Principal Component Analysis ...")
+        pca: PCA = PCA()
+        try:
+            pca.fit(df)
+        except ValueError as ve:
+            logger.info("Error!")
+            logger.info("Maybe your input file contains NA.")
+            logger.info("Please imputate your file before PCA.")
+            logger.info("=======================================================")
+            sys.exit()
+
+        res: np.ndarray = pca.transform(df)
+
+        # 主成分スコア
+        pca_score: pd.DataFrame = pd.DataFrame(
+            data=res,
+            columns=[f"PC{x}" for x in range(1, len(df.index)+1)],
+            index=df.index)
+        pca_score.to_csv(f"{out_dir}/PCA_Score.txt", sep="\t")
+
+        # 寄与率
+        evr:pd.DataFrame = pd.DataFrame(
+            data=pca.explained_variance_ratio_,
+            columns=["explained_variance_ratio"],
+            index=[f"PC{x}" for x in range(1, len(df.index)+1)])
+        evr.to_csv(f"{out_dir}/Expl_Var_Ratio.txt", sep="\t")
+
+        # # 固有値
+        # ev:pd.DataFrame = pd.DataFrame(
+        #     data=pca.explained_variance_,
+        #     column=["explained_variance"],
+        #     index=[f"PC{x}" for x in range(1, len(df.index)+1)])
+        # ev.to_csv(f"{out_dir}/Expl_Var.txt", sep="\t")
+    
+    # データがメモリに乗り切らない場合
+    except MemoryError:
         logger.info("Error!")
-        logger.info(f"File: {fene.filename} does not exisit.")
-        logger.info("Suspend the process.")
+        logger.info("Input data is too large and memory is insufficient.")
+        logger.info("Please diet input file by using \"12_diet_data.py\" before PCA.")
         logger.info("=======================================================")
         sys.exit()
-
-    # Standardizing by each line(SNP).
-    logger.info("Standardizing data...")
-    df = df.apply(lambda x: (x-x.mean())/x.std(ddof=True), axis=1)
-    df = df.T
-
-    # Performing PCA
-    logger.info("Performing Principal Component Analysis ...")
-    pca: PCA = PCA()
-    try:
-        pca.fit(df)
-    except ValueError as ve:
-        logger.info("Error!")
-        logger.info("Maybe your input file contains NA.")
-        logger.info("Please imputate your file before PCA.")
-        logger.info("=======================================================")
-        sys.exit()
-
-    res: np.ndarray = pca.transform(df)
-
-    # 主成分スコア
-    pca_score: pd.DataFrame = pd.DataFrame(
-        data=res,
-        columns=[f"PC{x}" for x in range(1, len(df.index)+1)],
-        index=df.index)
-    pca_score.to_csv(f"{out_dir}/PCA_Score.txt", sep="\t")
-
-    # 寄与率
-    evr:pd.DataFrame = pd.DataFrame(
-        data=pca.explained_variance_ratio_,
-        columns=["explained_variance_ratio"],
-        index=[f"PC{x}" for x in range(1, len(df.index)+1)])
-    evr.to_csv(f"{out_dir}/Expl_Var_Ratio.txt", sep="\t")
-
-    # # 固有値
-    # ev:pd.DataFrame = pd.DataFrame(
-    #     data=pca.explained_variance_,
-    #     column=["explained_variance"],
-    #     index=[f"PC{x}" for x in range(1, len(df.index)+1)])
-    # ev.to_csv(f"{out_dir}/Expl_Var.txt", sep="\t")
+    
     end: float = time.time()
     logger.info("Success processing!")
     logger.info(f"Run Time = {Runtime_counter(start, end)} seconds")
