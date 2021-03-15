@@ -2,34 +2,34 @@
 #! coding: utf-8
 '''
 Python >= 3.7
-VCF version4.2
-(https://samtools.github.io/hts-specs/VCFv4.2.pdf)
 
-00_before_imputation.py
+12_diet_data.py
     -i (--input-file-path)
     -o (--output-file-path)
 
-BeagleによるImputationを行う際の前処理用スクリプト。
-VCFのData lineを対象とし、そのうち genotype fieldからGT(genotype)だけを取り出す。
-これが2倍体のフォーマットに沿わない場合、欠損値(./.)に変換して出力する。
-GTAKで2倍体にも関わらず半数体のジェノタイプが出たことがあり、
-下流の解析に詰まったことがあるため。
+
+データ量が多くメモリに乗り切らない計算を行う場合において
+データを削減するスクリプト。デフォルトでは1/10に削減する。
+PCAなどデータを要約する場合向け。
 '''
+
 
 import argparse
 import datetime
 from logging import getLogger, StreamHandler, FileHandler, INFO, Formatter
 import os
+import random
+import subprocess
 import sys
 import time
-from typing import List
+
 
 sys.path.append(os.path.dirname(os.path.abspath(__file__)) + "/src")
 from my_utils import Runtime_counter
-from my_vcf import Remain_only_GT
 
 
 def main():
+    random.seed(0)
     ################ Setting command line arguments ################
     parser=argparse.ArgumentParser(
         description=__doc__,
@@ -75,40 +75,46 @@ def main():
     logger.info("=======================================================")
     logger.info("Start program...")
 
+    # シェルコマンドで行数を数える
+    proc_res: subprocess.CompletedProcess = subprocess.run(
+        args=["wc", "-l", input_file_path], shell=False, 
+        stdout=subprocess.PIPE)
+    # 入力ファイルが存在しない場合
+    if not proc_res.stdout.decode():
+        logger.info("Error!")
+        logger.info("Maybe input file does not exist.")
+        logger.info("Suspend the process.")
+        logger.info("=======================================================")
+        sys.exit()
+    num_lines: int = int(proc_res.stdout.decode().split(" ")[0])
+
+    # 全体のdiet_rate分の1をランダムに選び出力する。
+    # ただし1行目はヘッダーとして必ず残す。
+    # in演算子を使う場合listよりsetの方が高速なのでsetに変換する。
+    diet_rate: int = 10
+    outlines: set = \
+        set([1] + random.sample(range(2, num_lines+1), k=int(num_lines/diet_rate)))
+    i: int = 1
     try:
         with open(input_file_path, "r") as input_file, \
             open(output_file_path, "w") as output_file:
             for line in input_file:
-                line: str = line.rstrip("\n|\r|\r\n")
-                if line.startswith("#"): # Meta-information or header line
-                    output_file.write(line + "\n")
-                else: #Data line
-                    splited_line: List[str] = line.split("\t")
-                    splited_line[8] = "GT"
-                    splited_line[9:] = \
-                        list(map(Remain_only_GT, splited_line[9:]))
-                    new_line: str = "\t".join(splited_line)
-                    output_file.write(new_line + "\n")
+                if i in outlines:
+                    output_file.write(line)
+                i += 1
     except FileNotFoundError as fene:
         logger.info("Error!")
         logger.info(f"File: {fene.filename} does not exisit.")
         logger.info("Suspend the process.")
         logger.info("=======================================================")
         sys.exit()
-    except UnicodeDecodeError:
-        logger.info("Error!")
-        logger.info("Maybe your file is compressed.")
-        logger.info("Check it out.")
-        logger.info("Suspend the process.")
-        logger.info("=======================================================")
-        sys.exit()
-    
+
     end: float = time.time()
     logger.info("Success processing!")
     logger.info(f"Run Time = {Runtime_counter(start, end)} seconds")
-    logger.info("Next step is Imputation!")
     logger.info("=======================================================")
     ################ End of main process ################
+
 
 if __name__=="__main__":
     main()
